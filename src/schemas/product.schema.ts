@@ -6,6 +6,9 @@ export type ProductDocument = Product & Document;
 
 @Schema({ timestamps: true })
 export class Product {
+  @Prop()
+  sku: string;
+
   @Prop({ required: true })
   name: string;
 
@@ -55,5 +58,6 @@ export class Product {
 export const ProductSchema = SchemaFactory.createForClass(Product);
 
 ProductSchema.index({ slug: 1 }, { unique: true });
+ProductSchema.index({ sku: 1 }, { sparse: true });
 ProductSchema.index({ categories: 1 });
 ProductSchema.index({ price: 1 });

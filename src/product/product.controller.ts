@@ -21,10 +21,24 @@ export class ProductController {
   findAllAdmin(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('category') category?: string,
+    @Query('isActive') isActive?: string,
+    @Query('isFeatured') isFeatured?: string,
+    @Query('isNewArrival') isNewArrival?: string,
   ) {
+    const filters: Record<string, unknown> = {};
+    if (search) filters.search = search;
+    if (category) filters.category = category;
+    if (isActive === 'true') filters.isActive = true;
+    if (isActive === 'false') filters.isActive = false;
+    if (isFeatured === 'true') filters.isFeatured = true;
+    if (isNewArrival === 'true') filters.isNewArrival = true;
+
     return this.productService.findAllAdmin(
       page ? parseInt(page, 10) : 1,
-      limit ? parseInt(limit, 10) : 50,
+      limit ? parseInt(limit, 10) : 20,
+      Object.keys(filters).length ? filters : undefined,
     );
   }
 

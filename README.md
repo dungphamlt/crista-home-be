@@ -2,14 +2,20 @@
 
 NestJS API cho Crista Home.
 
-## Cài đặt
+## Chạy
+
 ```bash
 npm install
-```
-
-## Chạy
-```bash
 npm run dev
 ```
 
-Cần cấu hình `.env` (MongoDB, JWT, SMTP...).
+## Deploy Railway
+
+Xem [DEPLOY-RAILWAY.md](./DEPLOY-RAILWAY.md) để biết chi tiết.
+
+## Biến môi trường
+
+- `MONGODB_URI` - Connection string MongoDB
+- `JWT_SECRET` - Secret cho JWT
+- `API_URL` - URL API (cho upload)
+- `CORS_ORIGINS` - Các domain được phép CORS

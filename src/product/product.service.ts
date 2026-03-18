@@ -19,18 +19,52 @@ export class ProductService {
       .replace(/(^-|-$)/g, '');
   }
 
-  async findAllAdmin(page = 1, limit = 50) {
+  async findAllAdmin(
+    page = 1,
+    limit = 50,
+    filters?: {
+      search?: string;
+      category?: string;
+      isActive?: boolean;
+      isFeatured?: boolean;
+      isNewArrival?: boolean;
+    },
+  ) {
     const skip = (page - 1) * limit;
+    const query: Record<string, unknown> = {};
+
+    if (filters?.category) {
+      query.categories = filters.category;
+    }
+    if (filters?.isActive !== undefined) {
+      query.isActive = filters.isActive;
+    }
+    if (filters?.isFeatured !== undefined) {
+      query.isFeatured = filters.isFeatured;
+    }
+    if (filters?.isNewArrival !== undefined) {
+      query.isNewArrival = filters.isNewArrival;
+    }
+    if (filters?.search && filters.search.trim()) {
+      const term = filters.search.trim();
+      query.$or = [
+        { name: { $regex: term, $options: 'i' } },
+        { description: { $regex: term, $options: 'i' } },
+        { shortDescription: { $regex: term, $options: 'i' } },
+        { sku: { $regex: term, $options: 'i' } },
+      ];
+    }
+
     const [data, total] = await Promise.all([
       this.productModel
-        .find()
+        .find(query)
         .populate('categories', 'name slug')
         .sort({ order: 1, createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean()
         .exec(),
-      this.productModel.countDocuments(),
+      this.productModel.countDocuments(query),
     ]);
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
@@ -60,9 +94,11 @@ export class ProductService {
       query.price = { ...(query.price as object), $lte: filters.maxPrice };
     }
     if (filters?.search && filters.search.trim()) {
+      const term = filters.search.trim();
       query.$or = [
-        { name: { $regex: filters.search, $options: 'i' } },
-        { description: { $regex: filters.search, $options: 'i' } },
+        { name: { $regex: term, $options: 'i' } },
+        { description: { $regex: term, $options: 'i' } },
+        { sku: { $regex: term, $options: 'i' } },
       ];
     }
     if (filters?.isFeatured !== undefined) {
