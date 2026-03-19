@@ -1,12 +1,12 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
-import { ProductVariant } from './product-variant.schema';
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { Document, Types } from "mongoose";
+import { ProductVariant } from "./product-variant.schema";
 
 export type ProductDocument = Product & Document;
 
 @Schema({ timestamps: true })
 export class Product {
-  @Prop()
+  @Prop({ required: true })
   sku: string;
 
   @Prop({ required: true })
@@ -30,7 +30,7 @@ export class Product {
   @Prop({ default: 0 })
   compareAtPrice?: number;
 
-  @Prop({ type: [Types.ObjectId], ref: 'Category', default: [] })
+  @Prop({ type: [Types.ObjectId], ref: "Category", default: [] })
   categories: Types.ObjectId[];
 
   @Prop({ type: [ProductVariant], default: [] })

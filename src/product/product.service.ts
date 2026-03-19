@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Product, ProductDocument } from '../schemas/product.schema';
+import { Injectable } from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model } from "mongoose";
+import { Product, ProductDocument } from "../schemas/product.schema";
 
 @Injectable()
 export class ProductService {
@@ -12,11 +12,11 @@ export class ProductService {
   private slugify(text: string): string {
     return text
       .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/đ/g, 'd')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
   }
 
   async findAllAdmin(
@@ -48,17 +48,17 @@ export class ProductService {
     if (filters?.search && filters.search.trim()) {
       const term = filters.search.trim();
       query.$or = [
-        { name: { $regex: term, $options: 'i' } },
-        { description: { $regex: term, $options: 'i' } },
-        { shortDescription: { $regex: term, $options: 'i' } },
-        { sku: { $regex: term, $options: 'i' } },
+        { name: { $regex: term, $options: "i" } },
+        { description: { $regex: term, $options: "i" } },
+        { shortDescription: { $regex: term, $options: "i" } },
+        { sku: { $regex: term, $options: "i" } },
       ];
     }
 
     const [data, total] = await Promise.all([
       this.productModel
         .find(query)
-        .populate('categories', 'name slug')
+        .populate("categories", "name slug")
         .sort({ order: 1, createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -66,6 +66,7 @@ export class ProductService {
         .exec(),
       this.productModel.countDocuments(query),
     ]);
+    console.log(data, "data");
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
@@ -96,9 +97,9 @@ export class ProductService {
     if (filters?.search && filters.search.trim()) {
       const term = filters.search.trim();
       query.$or = [
-        { name: { $regex: term, $options: 'i' } },
-        { description: { $regex: term, $options: 'i' } },
-        { sku: { $regex: term, $options: 'i' } },
+        { name: { $regex: term, $options: "i" } },
+        { description: { $regex: term, $options: "i" } },
+        { sku: { $regex: term, $options: "i" } },
       ];
     }
     if (filters?.isFeatured !== undefined) {
@@ -111,7 +112,7 @@ export class ProductService {
     const [data, total] = await Promise.all([
       this.productModel
         .find(query)
-        .populate('categories', 'name slug')
+        .populate("categories", "name slug")
         .sort({ order: 1, createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -132,7 +133,7 @@ export class ProductService {
   async findOne(id: string) {
     return this.productModel
       .findById(id)
-      .populate('categories', 'name slug')
+      .populate("categories", "name slug")
       .lean()
       .exec();
   }
@@ -140,7 +141,7 @@ export class ProductService {
   async findBySlug(slug: string) {
     return this.productModel
       .findOne({ slug, isActive: true })
-      .populate('categories', 'name slug')
+      .populate("categories", "name slug")
       .lean()
       .exec();
   }
@@ -164,7 +165,7 @@ export class ProductService {
   }
 
   async create(data: Partial<Product>) {
-    const slug = data.slug || this.slugify(data.name || '');
+    const slug = data.slug || this.slugify(data.name || "");
     return this.productModel.create({ ...data, slug });
   }
 
