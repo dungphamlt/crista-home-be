@@ -14,7 +14,7 @@ export class Category {
   @Prop()
   description?: string;
 
-  @Prop()
+  @Prop({ default: '' })
   image?: string;
 
   @Prop({ type: Types.ObjectId, ref: 'Category', default: null })

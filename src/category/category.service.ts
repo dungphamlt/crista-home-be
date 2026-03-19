@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { Category, CategoryDocument } from '../schemas/category.schema';
-import { Product, ProductDocument } from '../schemas/product.schema';
+import { Injectable } from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model, Types } from "mongoose";
+import { Category, CategoryDocument } from "../schemas/category.schema";
+import { Product, ProductDocument } from "../schemas/product.schema";
 
 @Injectable()
 export class CategoryService {
@@ -33,17 +33,13 @@ export class CategoryService {
     } else {
       filter.$or = [{ parent: null }, { parent: { $exists: false } }];
     }
-    return this.categoryModel
-      .find(filter)
-      .sort({ order: 1 })
-      .lean()
-      .exec();
+    return this.categoryModel.find(filter).sort({ order: 1 }).lean().exec();
   }
 
   async findAllAdmin() {
     const list = await this.categoryModel
       .find()
-      .populate('parent', 'name slug')
+      .populate("parent", "name slug")
       .lean()
       .exec();
     // Sắp xếp theo cây: cha trước con
@@ -75,7 +71,7 @@ export class CategoryService {
   }
 
   async create(data: Partial<Category>) {
-    const slug = data.slug || this.slugify(data.name || '');
+    const slug = data.slug || this.slugify(data.name || "");
     return this.categoryModel.create({ ...data, slug });
   }
 
@@ -96,10 +92,10 @@ export class CategoryService {
   private slugify(text: string): string {
     return text
       .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/đ/g, 'd')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
   }
 }
