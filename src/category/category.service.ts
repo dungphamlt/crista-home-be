@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Category, CategoryDocument } from '../schemas/category.schema';
 import { Product, ProductDocument } from '../schemas/product.schema';
 
@@ -27,8 +27,9 @@ export class CategoryService {
 
   async findAll(parentId?: string) {
     const filter: Record<string, unknown> = { isActive: true };
-    if (parentId) {
-      filter.parent = parentId;
+    const hasValidParent = parentId?.trim() && Types.ObjectId.isValid(parentId);
+    if (hasValidParent) {
+      filter.parent = new Types.ObjectId(parentId!.trim());
     } else {
       filter.$or = [{ parent: null }, { parent: { $exists: false } }];
     }
