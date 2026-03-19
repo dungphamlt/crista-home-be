@@ -7,27 +7,19 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { memoryStorage } from 'multer';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { UploadService } from './upload.service';
 import type { ApiResponse } from '../types';
 
-const UPLOAD_DIR = 'uploads';
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
-const storage = diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, UPLOAD_DIR);
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    const ext = extname(file.originalname) || '.jpg';
-    cb(null, `${uniqueSuffix}${ext}`);
-  },
-});
+const storage = memoryStorage();
 
 @Controller('upload')
 export class UploadController {
+  constructor(private readonly uploadService: UploadService) {}
+
   @UseGuards(JwtAuthGuard)
   @Post('image')
   @UseInterceptors(
@@ -42,14 +34,17 @@ export class UploadController {
       },
     }),
   )
-  uploadImage(
+  async uploadImage(
     @UploadedFile() file: Express.Multer.File,
-  ): ApiResponse<{ url: string }> {
+  ): Promise<ApiResponse<{ url: string }>> {
     if (!file) {
       throw new BadRequestException('Không có file');
     }
-    const baseUrl = process.env.API_URL || 'http://localhost:3002';
-    const url = `${baseUrl}/${UPLOAD_DIR}/${file.filename}`;
+    const url = await this.uploadService.uploadImage(
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+    );
     return {
       success: true,
       data: { url },

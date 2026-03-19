@@ -3,7 +3,6 @@ require("dotenv").config({ path: require("path").join(process.cwd(), ".env") });
 
 import { NestFactory } from "@nestjs/core";
 import { NestExpressApplication } from "@nestjs/platform-express";
-import { join } from "path";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
@@ -21,7 +20,6 @@ async function bootstrap() {
     origin: corsOrigins,
     allowedHeaders: ["Content-Type", "Authorization"],
   });
-  app.useStaticAssets(join(process.cwd(), "uploads"), { prefix: "/uploads/" });
   const port = process.env.PORT || 3002;
   await app.listen(port);
   console.log(`Crista Home API running on http://localhost:${port}`);
