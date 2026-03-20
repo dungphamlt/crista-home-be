@@ -15,6 +15,7 @@ async function bootstrap() {
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
         "https://crista-home.vercel.app",
+        "https://crista-home-cms.vercel.app"
       ];
   app.enableCors({
     origin: corsOrigins,
