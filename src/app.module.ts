@@ -8,6 +8,7 @@ import { OrderModule } from './order/order.module';
 import { CouponModule } from './coupon/coupon.module';
 import { ReviewModule } from './review/review.module';
 import { BlogModule } from './blog/blog.module';
+import { PageModule } from './page/page.module';
 import { BannerModule } from './banner/banner.module';
 import { EmailModule } from './email/email.module';
 import { UploadModule } from './upload/upload.module';
@@ -26,6 +27,7 @@ import { AppController } from './app.controller';
     CouponModule,
     ReviewModule,
     BlogModule,
+    PageModule,
     BannerModule,
     EmailModule,
     UploadModule,

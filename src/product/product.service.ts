@@ -9,6 +9,60 @@ export class ProductService {
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
   ) {}
 
+  private async findAllWithAtlasSearch(
+    searchTerm: string,
+    baseQuery: Record<string, unknown>,
+    skip: number,
+    limit: number,
+    page: number,
+  ) {
+    const pipeline = [
+      {
+        $search: {
+          index: "product_search",
+          text: {
+            query: searchTerm,
+            path: ["name", "description", "shortDescription", "sku"],
+            fuzzy: { maxEdits: 1 },
+          },
+        },
+      },
+      { $match: baseQuery },
+      {
+        $facet: {
+          data: [
+            { $sort: { order: 1, createdAt: -1 } },
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $lookup: {
+                from: "categories",
+                localField: "categories",
+                foreignField: "_id",
+                as: "categories",
+                pipeline: [{ $project: { name: 1, slug: 1 } }],
+              },
+            },
+            { $unset: ["__v"] },
+          ],
+          total: [{ $count: "count" }],
+        },
+      },
+    ];
+
+    const result = await this.productModel.aggregate(pipeline as any).exec();
+    const data = result[0]?.data || [];
+    const total = result[0]?.total?.[0]?.count || 0;
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
   private slugify(text: string): string {
     return text
       .toLowerCase()
@@ -45,13 +99,19 @@ export class ProductService {
     if (filters?.isNewArrival !== undefined) {
       query.isNewArrival = filters.isNewArrival;
     }
-    if (filters?.search && filters.search.trim()) {
-      const term = filters.search.trim();
+    const searchTerm = filters?.search?.trim();
+    const mongoUri = process.env.MONGODB_ATLAS_URI || process.env.MONGODB_URI || "";
+    const useAtlasSearch = searchTerm && mongoUri.includes("mongodb.net");
+
+    if (useAtlasSearch) {
+      return this.findAllWithAtlasSearch(searchTerm!, query, skip, limit, page);
+    }
+    if (searchTerm) {
       query.$or = [
-        { name: { $regex: term, $options: "i" } },
-        { description: { $regex: term, $options: "i" } },
-        { shortDescription: { $regex: term, $options: "i" } },
-        { sku: { $regex: term, $options: "i" } },
+        { name: { $regex: searchTerm, $options: "i" } },
+        { description: { $regex: searchTerm, $options: "i" } },
+        { shortDescription: { $regex: searchTerm, $options: "i" } },
+        { sku: { $regex: searchTerm, $options: "i" } },
       ];
     }
 
@@ -66,7 +126,6 @@ export class ProductService {
         .exec(),
       this.productModel.countDocuments(query),
     ]);
-    console.log(data, "data");
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
@@ -94,12 +153,18 @@ export class ProductService {
     if (filters?.maxPrice) {
       query.price = { ...(query.price as object), $lte: filters.maxPrice };
     }
-    if (filters?.search && filters.search.trim()) {
-      const term = filters.search.trim();
+    const searchTerm = filters?.search?.trim();
+    const mongoUri = process.env.MONGODB_ATLAS_URI || process.env.MONGODB_URI || "";
+    const useAtlasSearch = searchTerm && mongoUri.includes("mongodb.net");
+
+    if (useAtlasSearch) {
+      return this.findAllWithAtlasSearch(searchTerm!, query, skip, limit, page);
+    }
+    if (searchTerm) {
       query.$or = [
-        { name: { $regex: term, $options: "i" } },
-        { description: { $regex: term, $options: "i" } },
-        { sku: { $regex: term, $options: "i" } },
+        { name: { $regex: searchTerm, $options: "i" } },
+        { description: { $regex: searchTerm, $options: "i" } },
+        { sku: { $regex: searchTerm, $options: "i" } },
       ];
     }
     if (filters?.isFeatured !== undefined) {

@@ -1,0 +1,38 @@
+{
+  "name": "product_search",
+  "definition": {
+    "analyzers": [
+      {
+        "name": "vietnameseSearch",
+        "tokenizer": { "type": "standard" },
+        "tokenFilters": [{ "type": "icuFolding" }]
+      }
+    ],
+    "mappings": {
+      "dynamic": false,
+      "fields": {
+        "name": {
+          "type": "string",
+          "analyzer": "vietnameseSearch"
+        },
+        "description": {
+          "type": "string",
+          "analyzer": "vietnameseSearch"
+        },
+        "shortDescription": {
+          "type": "string",
+          "analyzer": "vietnameseSearch"
+        },
+        "sku": {
+          "type": "string",
+          "analyzer": "vietnameseSearch"
+        },
+        "isActive": { "type": "boolean" },
+        "categories": { "type": "objectId" },
+        "price": { "type": "number" },
+        "order": { "type": "number" },
+        "createdAt": { "type": "date" }
+      }
+    }
+  }
+}

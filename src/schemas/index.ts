@@ -7,4 +7,5 @@ export * from './order-item.schema';
 export * from './coupon.schema';
 export * from './review.schema';
 export * from './blog.schema';
+export * from './page.schema';
 export * from './banner.schema';
