@@ -2,6 +2,9 @@
   "name": "crista-home-be",
   "version": "0.0.0",
   "private": true,
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "scripts": {
     "build": "nest build",
     "migrate:images": "npx ts-node scripts/migrate-images-to-r2.ts",
