@@ -54,33 +54,37 @@ export class ProductService {
     limit: number,
     page: number,
   ) {
-    const paths = ["name", "description", "shortDescription", "sku"];
+    /** Không index search theo description: HTML dài dễ trùng từ ngẫu nhiên → kết quả nhiễu */
+    const pathsAll = ["name", "sku"];
     const words = searchTerm.split(/\s+/).filter(Boolean);
-    const searchStage =
-      words.length <= 1
-        ? {
-            $search: {
-              index: "product_search",
-              text: {
-                query: searchTerm,
-                path: paths,
-                fuzzy: { maxEdits: 1 },
-              },
+    if (words.length === 0) {
+      return {
+        data: [],
+        total: 0,
+        page,
+        limit,
+        totalPages: 0,
+      };
+    }
+
+    /**
+     * Mỗi từ phải xuất hiện (AND) trong ít nhất một field đã index.
+     * Không dùng fuzzy: fuzzy làm khớp nhầm (vd: sản phẩm không liên quan).
+     * Không dùng một cụm text + fuzzy cho cả chuỗi (kể cả 1 từ): dễ nhiễu.
+     */
+    const searchStage = {
+      $search: {
+        index: "product_search",
+        compound: {
+          must: words.map((word) => ({
+            text: {
+              query: word,
+              path: pathsAll,
             },
-          }
-        : {
-            $search: {
-              index: "product_search",
-              compound: {
-                must: words.map((word) => ({
-                  text: {
-                    query: word,
-                    path: paths,
-                  },
-                })),
-              },
-            },
-          };
+          })),
+        },
+      },
+    };
 
     const pipeline = [
       searchStage,
