@@ -14,18 +14,17 @@ export class AuthService {
 
   async validateUser(email: string, password: string): Promise<UserDocument | null> {
     const user = await this.userModel.findOne({ email });
-    if (user && (await bcrypt.compare(password, user.password))) {
+    if (!user?.password) {
+      return null;
+    }
+    if (await bcrypt.compare(password, user.password)) {
       return user;
     }
     return null;
   }
 
-  async login(email: string, password: string) {
-    const user = await this.validateUser(email, password);
-    if (!user) {
-      throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
-    }
-    const payload = { sub: user._id, email: user.email };
+  issueToken(user: UserDocument) {
+    const payload = { sub: String(user._id), email: user.email };
     return {
       access_token: this.jwtService.sign(payload),
       user: {
@@ -35,6 +34,50 @@ export class AuthService {
         role: user.role,
       },
     };
+  }
+
+  async login(email: string, password: string) {
+    const user = await this.validateUser(email, password);
+    if (!user) {
+      throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+    }
+    return this.issueToken(user);
+  }
+
+  async validateOAuthLogin(
+    provider: 'google' | 'facebook',
+    providerId: string,
+    email: string | undefined,
+    displayName: string | undefined,
+  ) {
+    if (!email) {
+      throw new UnauthorizedException(
+        'Không lấy được email từ tài khoản OAuth. Vui lòng cấp quyền email.',
+      );
+    }
+    const filter =
+      provider === 'google' ? { googleId: providerId } : { facebookId: providerId };
+    let user = await this.userModel.findOne(filter);
+    if (user) {
+      return this.issueToken(user);
+    }
+    user = await this.userModel.findOne({ email });
+    if (user) {
+      if (provider === 'google') {
+        user.googleId = providerId;
+      } else {
+        user.facebookId = providerId;
+      }
+      await user.save();
+      return this.issueToken(user);
+    }
+    user = await this.userModel.create({
+      email,
+      name: displayName || email.split('@')[0],
+      role: 'admin',
+      ...(provider === 'google' ? { googleId: providerId } : { facebookId: providerId }),
+    });
+    return this.issueToken(user);
   }
 
   async createAdmin(email: string, password: string, name?: string) {

@@ -8,14 +8,21 @@ export class User {
   @Prop({ required: true, unique: true })
   email: string;
 
-  @Prop({ required: true })
-  password: string;
+  /** Bỏ qua khi đăng ký chỉ qua OAuth */
+  @Prop({ required: false })
+  password?: string;
 
   @Prop({ default: 'admin' })
   role: string;
 
   @Prop()
   name?: string;
+
+  @Prop({ sparse: true, unique: true })
+  googleId?: string;
+
+  @Prop({ sparse: true, unique: true })
+  facebookId?: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
