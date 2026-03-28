@@ -21,14 +21,15 @@ export class ProductController {
   findAllAdmin(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
-    @Query('search') search?: string,
+    @Query('search') search?: string | string[],
     @Query('category') category?: string,
     @Query('isActive') isActive?: string,
     @Query('isFeatured') isFeatured?: string,
     @Query('isNewArrival') isNewArrival?: string,
   ) {
     const filters: Record<string, unknown> = {};
-    if (search) filters.search = search;
+    const searchStr = this.normalizeQueryParam(search);
+    if (searchStr !== undefined) filters.search = searchStr;
     if (category) filters.category = category;
     if (isActive === 'true') filters.isActive = true;
     if (isActive === 'false') filters.isActive = false;
@@ -42,6 +43,16 @@ export class ProductController {
     );
   }
 
+  /** Chuẩn hóa query string (Nest có thể trả string | string[]) */
+  private normalizeQueryParam(
+    v: string | string[] | undefined,
+  ): string | undefined {
+    if (v === undefined || v === null) return undefined;
+    const s = Array.isArray(v) ? v[0] : v;
+    const t = typeof s === 'string' ? s.trim() : '';
+    return t === '' ? undefined : t;
+  }
+
   @Get()
   findAll(
     @Query('page') page?: string,
@@ -49,7 +60,7 @@ export class ProductController {
     @Query('category') category?: string,
     @Query('minPrice') minPrice?: string,
     @Query('maxPrice') maxPrice?: string,
-    @Query('search') search?: string,
+    @Query('search') search?: string | string[],
     @Query('featured') featured?: string,
     @Query('new') isNew?: string,
   ) {
@@ -57,7 +68,8 @@ export class ProductController {
     if (category) filters.category = category;
     if (minPrice) filters.minPrice = Number(minPrice);
     if (maxPrice) filters.maxPrice = Number(maxPrice);
-    if (search) filters.search = search;
+    const searchStr = this.normalizeQueryParam(search);
+    if (searchStr !== undefined) filters.search = searchStr;
     if (featured === 'true') filters.isFeatured = true;
     if (isNew === 'true') filters.isNewArrival = true;
 

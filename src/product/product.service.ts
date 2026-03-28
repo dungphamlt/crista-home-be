@@ -9,6 +9,44 @@ export class ProductService {
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
   ) {}
 
+  private escapeRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  /** Tìm theo từng từ (AND): mỗi từ phải khớp ít nhất một trong các field */
+  private applyRegexSearch(
+    query: Record<string, unknown>,
+    searchTerm: string,
+    includeShortDescription = true,
+  ) {
+    const words = searchTerm.split(/\s+/).filter(Boolean);
+    const fieldOrs = (word: string) => {
+      const esc = this.escapeRegex(word);
+      const or: Record<string, unknown>[] = [
+        { name: { $regex: esc, $options: "i" } },
+        { description: { $regex: esc, $options: "i" } },
+      ];
+      if (includeShortDescription) {
+        or.push({ shortDescription: { $regex: esc, $options: "i" } });
+      }
+      or.push({ sku: { $regex: esc, $options: "i" } });
+      return { $or: or };
+    };
+    if (words.length === 0) return;
+    if (words.length === 1) {
+      Object.assign(query, fieldOrs(words[0]));
+    } else {
+      query.$and = words.map((w) => fieldOrs(w));
+    }
+  }
+
+  private shouldUseAtlasSearch(): boolean {
+    if (process.env.USE_ATLAS_SEARCH === "true") return true;
+    if (process.env.USE_ATLAS_SEARCH === "false") return false;
+    const uri = process.env.MONGODB_ATLAS_URI || process.env.MONGODB_URI || "";
+    return uri.includes("mongodb.net");
+  }
+
   private async findAllWithAtlasSearch(
     searchTerm: string,
     baseQuery: Record<string, unknown>,
@@ -16,17 +54,36 @@ export class ProductService {
     limit: number,
     page: number,
   ) {
+    const paths = ["name", "description", "shortDescription", "sku"];
+    const words = searchTerm.split(/\s+/).filter(Boolean);
+    const searchStage =
+      words.length <= 1
+        ? {
+            $search: {
+              index: "product_search",
+              text: {
+                query: searchTerm,
+                path: paths,
+                fuzzy: { maxEdits: 1 },
+              },
+            },
+          }
+        : {
+            $search: {
+              index: "product_search",
+              compound: {
+                must: words.map((word) => ({
+                  text: {
+                    query: word,
+                    path: paths,
+                  },
+                })),
+              },
+            },
+          };
+
     const pipeline = [
-      {
-        $search: {
-          index: "product_search",
-          text: {
-            query: searchTerm,
-            path: ["name", "description", "shortDescription", "sku"],
-            fuzzy: { maxEdits: 1 },
-          },
-        },
-      },
+      searchStage,
       { $match: baseQuery },
       {
         $facet: {
@@ -100,19 +157,13 @@ export class ProductService {
       query.isNewArrival = filters.isNewArrival;
     }
     const searchTerm = filters?.search?.trim();
-    const mongoUri = process.env.MONGODB_ATLAS_URI || process.env.MONGODB_URI || "";
-    const useAtlasSearch = searchTerm && mongoUri.includes("mongodb.net");
+    const useAtlasSearch = searchTerm && this.shouldUseAtlasSearch();
 
     if (useAtlasSearch) {
       return this.findAllWithAtlasSearch(searchTerm!, query, skip, limit, page);
     }
     if (searchTerm) {
-      query.$or = [
-        { name: { $regex: searchTerm, $options: "i" } },
-        { description: { $regex: searchTerm, $options: "i" } },
-        { shortDescription: { $regex: searchTerm, $options: "i" } },
-        { sku: { $regex: searchTerm, $options: "i" } },
-      ];
+      this.applyRegexSearch(query, searchTerm);
     }
 
     const [data, total] = await Promise.all([
@@ -154,18 +205,13 @@ export class ProductService {
       query.price = { ...(query.price as object), $lte: filters.maxPrice };
     }
     const searchTerm = filters?.search?.trim();
-    const mongoUri = process.env.MONGODB_ATLAS_URI || process.env.MONGODB_URI || "";
-    const useAtlasSearch = searchTerm && mongoUri.includes("mongodb.net");
+    const useAtlasSearch = searchTerm && this.shouldUseAtlasSearch();
 
     if (useAtlasSearch) {
       return this.findAllWithAtlasSearch(searchTerm!, query, skip, limit, page);
     }
     if (searchTerm) {
-      query.$or = [
-        { name: { $regex: searchTerm, $options: "i" } },
-        { description: { $regex: searchTerm, $options: "i" } },
-        { sku: { $regex: searchTerm, $options: "i" } },
-      ];
+      this.applyRegexSearch(query, searchTerm, true);
     }
     if (filters?.isFeatured !== undefined) {
       query.isFeatured = filters.isFeatured;
