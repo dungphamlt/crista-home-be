@@ -74,7 +74,7 @@ export class AuthService {
     user = await this.userModel.create({
       email,
       name: displayName || email.split('@')[0],
-      role: 'admin',
+      role: 'user',
       ...(provider === 'google' ? { googleId: providerId } : { facebookId: providerId }),
     });
     return this.issueToken(user);

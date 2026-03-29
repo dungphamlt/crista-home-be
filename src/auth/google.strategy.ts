@@ -1,23 +1,23 @@
-import { Injectable } from '@nestjs/common';
-import { PassportStrategy } from '@nestjs/passport';
-import { Strategy, VerifyCallback } from 'passport-google-oauth20';
-import { ConfigService } from '@nestjs/config';
-import { AuthService } from './auth.service';
+import { Injectable } from "@nestjs/common";
+import { PassportStrategy } from "@nestjs/passport";
+import { Strategy, VerifyCallback } from "passport-google-oauth20";
+import { ConfigService } from "@nestjs/config";
+import { AuthService } from "./auth.service";
 
 @Injectable()
-export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
+export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
   constructor(
     private authService: AuthService,
     private configService: ConfigService,
   ) {
     super({
-      clientID: configService.get<string>('GOOGLE_CLIENT_ID', ''),
-      clientSecret: configService.get<string>('GOOGLE_CLIENT_SECRET', ''),
+      clientID: configService.get<string>("GOOGLE_CLIENT_ID", ""),
+      clientSecret: configService.get<string>("GOOGLE_CLIENT_SECRET", ""),
       callbackURL: configService.get<string>(
-        'GOOGLE_CALLBACK_URL',
-        'http://localhost:3002/auth/google/callback',
+        "GOOGLE_CALLBACK_URL",
+        "https://crista-home-be-production.up.railway.app/auth/facebook/callback",
       ),
-      scope: ['email', 'profile'],
+      scope: ["email", "profile"],
     });
   }
 
@@ -39,7 +39,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         : profile.displayName;
     try {
       const result = await this.authService.validateOAuthLogin(
-        'google',
+        "google",
         profile.id,
         email,
         displayName,
