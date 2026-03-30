@@ -15,7 +15,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
       clientSecret: configService.get<string>("GOOGLE_CLIENT_SECRET", ""),
       callbackURL: configService.get<string>(
         "GOOGLE_CALLBACK_URL",
-        "https://crista-home-be-production.up.railway.app/auth/facebook/callback",
+        "https://crista-home-be-production.up.railway.app/auth/google/callback",
       ),
       scope: ["email", "profile"],
     });
