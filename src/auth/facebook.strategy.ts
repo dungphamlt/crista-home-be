@@ -15,7 +15,8 @@ export class FacebookStrategy extends PassportStrategy(Strategy, "facebook") {
       clientSecret: configService.getOrThrow<string>("FACEBOOK_APP_SECRET"), // ✅ bỏ hardcode fallback
       callbackURL: configService.getOrThrow<string>("FACEBOOK_CALLBACK_URL"), // ✅ bỏ hardcode fallback
       profileFields: ["id", "emails", "name", "displayName", "photos"], // ✅ thêm "photos" để lấy avatar
-      scope: ["email"],
+      // Facebook yêu cầu public_profile kèm email; chỉ "email" dễ lỗi Invalid Scopes
+      scope: ["email", "public_profile"],
     });
   }
 
