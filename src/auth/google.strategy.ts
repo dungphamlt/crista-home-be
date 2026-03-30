@@ -4,6 +4,7 @@ import { PassportStrategy } from "@nestjs/passport";
 import { Strategy, VerifyCallback, Profile } from "passport-google-oauth20"; // ✅ import Profile
 import { ConfigService } from "@nestjs/config";
 import { AuthService } from "./auth.service";
+import { normalizeGoogleAvatarUrl } from "./utils/avatar-url.util";
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
@@ -26,7 +27,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
     done: VerifyCallback,
   ) {
     const email = profile.emails?.[0]?.value;
-    const avatar = profile.photos?.[0]?.value; // ✅ lấy thêm avatar
+    const avatar = normalizeGoogleAvatarUrl(profile.photos?.[0]?.value);
     const displayName =
       profile.name?.givenName && profile.name?.familyName
         ? `${profile.name.givenName} ${profile.name.familyName}`

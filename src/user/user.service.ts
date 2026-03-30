@@ -6,6 +6,7 @@ import {
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, isValidObjectId } from "mongoose";
 import { User, UserDocument } from "../schemas/user.schema";
+import { resolveAvatarForApi } from "../auth/utils/avatar-url.util";
 
 export type SafeUserView = {
   id: string;
@@ -32,7 +33,7 @@ export class UserService {
       email: o.email,
       name: o.name,
       role: o.role,
-      avatar: o.avatar,
+      avatar: resolveAvatarForApi(o.avatar, o.facebookId),
       googleId: o.googleId,
       facebookId: o.facebookId,
       createdAt: o.createdAt,
