@@ -12,6 +12,7 @@ import { PageModule } from './page/page.module';
 import { BannerModule } from './banner/banner.module';
 import { EmailModule } from './email/email.module';
 import { UploadModule } from './upload/upload.module';
+import { UserModule } from './user/user.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -31,6 +32,7 @@ import { AppController } from './app.controller';
     BannerModule,
     EmailModule,
     UploadModule,
+    UserModule,
   ],
   controllers: [AppController],
 })
