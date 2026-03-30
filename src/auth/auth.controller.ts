@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 
 class LoginDto {
@@ -39,8 +39,11 @@ export class AuthController {
 
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
-  async googleAuthCallback(@Req() req: Request) {
-    return req.user as OAuthLoginResult;
+  async googleAuthCallback(
+    @Req() req: Request & { user?: OAuthLoginResult },
+    @Res({ passthrough: false }) res: Response,
+  ) {
+    return this.oauthCallbackRedirect(req, res);
   }
 
   @Get('facebook')
@@ -49,8 +52,32 @@ export class AuthController {
 
   @Get('facebook/callback')
   @UseGuards(AuthGuard('facebook'))
-  async facebookAuthCallback(@Req() req: Request) {
-    return req.user as OAuthLoginResult;
+  async facebookAuthCallback(
+    @Req() req: Request & { user?: OAuthLoginResult },
+    @Res({ passthrough: false }) res: Response,
+  ) {
+    return this.oauthCallbackRedirect(req, res);
+  }
+
+  private oauthCallbackRedirect(
+    req: Request & { user?: OAuthLoginResult },
+    res: Response,
+  ) {
+    const data = req.user;
+    if (!data?.access_token || !data?.user) {
+      const frontend = process.env.FRONTEND_URL ?? 'http://localhost:3000';
+      return res.redirect(
+        `${frontend}/dang-nhap/oauth?error=${encodeURIComponent('oauth_invalid')}`,
+      );
+    }
+    const { access_token, user } = data;
+    const userJson = encodeURIComponent(JSON.stringify(user));
+    const frontend = process.env.FRONTEND_URL ?? 'http://localhost:3000';
+    const url =
+      `${frontend}/dang-nhap/oauth` +
+      `?access_token=${encodeURIComponent(access_token)}` +
+      `&user=${userJson}`;
+    return res.redirect(302, url);
   }
 
   @Post('seed-admin')
