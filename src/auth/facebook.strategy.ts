@@ -3,7 +3,6 @@ import { PassportStrategy } from "@nestjs/passport";
 import { Strategy, Profile } from "passport-facebook";
 import { ConfigService } from "@nestjs/config";
 import { AuthService } from "./auth.service";
-import { facebookProfilePictureUrl } from "./utils/avatar-url.util";
 
 @Injectable()
 export class FacebookStrategy extends PassportStrategy(Strategy, "facebook") {
@@ -15,7 +14,7 @@ export class FacebookStrategy extends PassportStrategy(Strategy, "facebook") {
       clientID: configService.getOrThrow<string>("FACEBOOK_APP_ID"), // ✅ bỏ hardcode fallback
       clientSecret: configService.getOrThrow<string>("FACEBOOK_APP_SECRET"), // ✅ bỏ hardcode fallback
       callbackURL: configService.getOrThrow<string>("FACEBOOK_CALLBACK_URL"), // ✅ bỏ hardcode fallback
-      profileFields: ["id", "emails", "name", "displayName"],
+      profileFields: ["id", "emails", "name", "displayName", "photos"],
       // Facebook yêu cầu public_profile kèm email; chỉ "email" dễ lỗi Invalid Scopes
       scope: ["email", "public_profile"],
     });
@@ -28,7 +27,7 @@ export class FacebookStrategy extends PassportStrategy(Strategy, "facebook") {
     done: (err: Error | null, user?: unknown) => void,
   ) {
     const email = profile.emails?.[0]?.value;
-    const avatar = facebookProfilePictureUrl(profile.id);
+    const avatar = profile.photos?.[0]?.value;
 
     const displayName =
       profile.name?.givenName && profile.name?.familyName
