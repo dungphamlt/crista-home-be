@@ -11,13 +11,10 @@ export class FacebookStrategy extends PassportStrategy(Strategy, "facebook") {
     private configService: ConfigService,
   ) {
     super({
-      clientID: configService.get<string>("FACEBOOK_APP_ID", ""),
-      clientSecret: configService.get<string>("FACEBOOK_APP_SECRET", ""),
-      callbackURL: configService.get<string>(
-        "FACEBOOK_CALLBACK_URL",
-        "https://crista-home-be-production.up.railway.app/auth/facebook/callback",
-      ),
-      profileFields: ["id", "emails", "name", "displayName"],
+      clientID: configService.getOrThrow<string>("FACEBOOK_APP_ID"), // ✅ bỏ hardcode fallback
+      clientSecret: configService.getOrThrow<string>("FACEBOOK_APP_SECRET"), // ✅ bỏ hardcode fallback
+      callbackURL: configService.getOrThrow<string>("FACEBOOK_CALLBACK_URL"), // ✅ bỏ hardcode fallback
+      profileFields: ["id", "emails", "name", "displayName", "photos"], // ✅ thêm "photos" để lấy avatar
       scope: ["email"],
     });
   }
@@ -29,17 +26,20 @@ export class FacebookStrategy extends PassportStrategy(Strategy, "facebook") {
     done: (err: Error | null, user?: unknown) => void,
   ) {
     const email = profile.emails?.[0]?.value;
+    const avatar = profile.photos?.[0]?.value; // ✅ lấy avatar
+
     const displayName =
-      profile.displayName ||
-      [profile.name?.givenName, profile.name?.familyName]
-        .filter(Boolean)
-        .join(" ");
+      profile.name?.givenName && profile.name?.familyName
+        ? `${profile.name.givenName} ${profile.name.familyName}` // ✅ ưu tiên ghép givenName + familyName
+        : profile.displayName || undefined;
+
     try {
       const result = await this.authService.validateOAuthLogin(
         "facebook",
         profile.id,
         email,
-        displayName || undefined,
+        displayName,
+        avatar, // ✅ truyền avatar
       );
       done(null, result);
     } catch (err) {

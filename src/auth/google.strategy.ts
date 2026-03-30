@@ -1,6 +1,7 @@
+// google.strategy.ts
 import { Injectable } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
-import { Strategy, VerifyCallback } from "passport-google-oauth20";
+import { Strategy, VerifyCallback, Profile } from "passport-google-oauth20"; // ✅ import Profile
 import { ConfigService } from "@nestjs/config";
 import { AuthService } from "./auth.service";
 
@@ -11,12 +12,9 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
     private configService: ConfigService,
   ) {
     super({
-      clientID: configService.get<string>("GOOGLE_CLIENT_ID", ""),
-      clientSecret: configService.get<string>("GOOGLE_CLIENT_SECRET", ""),
-      callbackURL: configService.get<string>(
-        "GOOGLE_CALLBACK_URL",
-        "https://crista-home-be-production.up.railway.app/auth/google/callback",
-      ),
+      clientID: configService.getOrThrow<string>("GOOGLE_CLIENT_ID"),
+      clientSecret: configService.getOrThrow<string>("GOOGLE_CLIENT_SECRET"),
+      callbackURL: configService.getOrThrow<string>("GOOGLE_CALLBACK_URL"), // ✅ bỏ hardcode fallback
       scope: ["email", "profile"],
     });
   }
@@ -24,25 +22,23 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
   async validate(
     _accessToken: string,
     _refreshToken: string,
-    profile: {
-      id: string;
-      displayName?: string;
-      name?: { givenName?: string; familyName?: string };
-      emails?: { value: string }[];
-    },
+    profile: Profile, // ✅ dùng type từ thư viện
     done: VerifyCallback,
   ) {
     const email = profile.emails?.[0]?.value;
+    const avatar = profile.photos?.[0]?.value; // ✅ lấy thêm avatar
     const displayName =
       profile.name?.givenName && profile.name?.familyName
         ? `${profile.name.givenName} ${profile.name.familyName}`
         : profile.displayName;
+
     try {
       const result = await this.authService.validateOAuthLogin(
         "google",
         profile.id,
         email,
         displayName,
+        avatar, // ✅ truyền avatar
       );
       done(null, result);
     } catch (err) {

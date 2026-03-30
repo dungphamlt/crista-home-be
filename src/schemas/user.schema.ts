@@ -18,6 +18,9 @@ export class User {
   @Prop()
   name?: string;
 
+  @Prop()
+  avatar?: string;
+
   @Prop({ sparse: true, unique: true })
   googleId?: string;
 
