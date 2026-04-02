@@ -11,6 +11,10 @@ export class ProductVariant {
   @Prop()
   value?: string;
 
+  /** Mã SKU riêng của biến thể (VD: 60234-G). Nên unique toàn hệ thống — index ở product.schema */
+  @Prop()
+  sku?: string;
+
   @Prop({ type: [String], default: [] })
   images: string[];
 

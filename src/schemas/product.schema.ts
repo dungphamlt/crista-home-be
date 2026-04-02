@@ -63,5 +63,7 @@ export const ProductSchema = SchemaFactory.createForClass(Product);
 
 ProductSchema.index({ slug: 1 }, { unique: true });
 ProductSchema.index({ sku: 1 }, { sparse: true });
+/** Mỗi mã variant (VD: 60234-G) chỉ xuất hiện một lần trong DB */
+ProductSchema.index({ "variants.sku": 1 }, { unique: true, sparse: true });
 ProductSchema.index({ categories: 1 });
 ProductSchema.index({ price: 1 });
