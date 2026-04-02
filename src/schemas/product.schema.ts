@@ -24,6 +24,10 @@ export class Product {
   @Prop({ type: [String], default: [] })
   images: string[];
 
+  /** URL ảnh bìa / hero (tùy chọn; gallery vẫn dùng `images`) */
+  @Prop()
+  coverImage?: string;
+
   @Prop({ required: true, default: 0 })
   price: number;
 

@@ -11,8 +11,8 @@ export class ProductVariant {
   @Prop()
   value?: string;
 
-  @Prop()
-  image?: string;
+  @Prop({ type: [String], default: [] })
+  images: string[];
 
   @Prop({ default: 0 })
   stock: number;
