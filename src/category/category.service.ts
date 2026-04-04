@@ -11,13 +11,30 @@ export class CategoryService {
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
   ) {}
 
+  /** Chuẩn hóa _id từ lean() (ObjectId / string / Buffer) để khớp field categories trên product */
+  private toCategoryObjectId(id: unknown): Types.ObjectId {
+    if (id instanceof Types.ObjectId) return id;
+    return new Types.ObjectId(String(id));
+  }
+
   async findAllWithProductCount(parentId?: string) {
     const categories = await this.findAll(parentId);
     const withCount = await Promise.all(
       categories.map(async (cat) => {
+        const categoryId = this.toCategoryObjectId(cat._id);
+        const idStr = String(categoryId);
         const count = await this.productModel.countDocuments({
-          categories: cat._id,
-          isActive: true,
+          $and: [
+            {
+              /** ObjectId hoặc string (dữ liệu cũ / JSON thô) */
+              $or: [
+                { categories: categoryId },
+                { categories: idStr },
+              ],
+            },
+            /** Bản ghi cũ có thể không có isActive; mặc định schema là đang bán */
+            { isActive: { $ne: false } },
+          ],
         });
         return { ...cat, productCount: count };
       }),
