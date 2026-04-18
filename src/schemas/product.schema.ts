@@ -31,6 +31,12 @@ export class Product {
   @Prop({ required: true, default: 0 })
   price: number;
 
+  @Prop()
+  wholesalePrice?: number;
+
+  @Prop()
+  bulkWholesalePrice?: number;
+
   @Prop({ default: 0 })
   compareAtPrice?: number;
 

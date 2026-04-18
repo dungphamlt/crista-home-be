@@ -5,6 +5,7 @@ import {
 } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, isValidObjectId } from "mongoose";
+import { ALL_USER_ROLES } from "../auth/roles";
 import { User, UserDocument } from "../schemas/user.schema";
 
 export type SafeUserView = {
@@ -91,6 +92,26 @@ export class UserService {
       throw new BadRequestException("ID không hợp lệ");
     }
     const user = await this.userModel.findById(id).select("-password").exec();
+    if (!user) {
+      throw new NotFoundException("Không tìm thấy người dùng");
+    }
+    return this.toSafeUser(user);
+  }
+
+  async updateRoleForAdmin(id: string, role: string): Promise<SafeUserView> {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException("ID không hợp lệ");
+    }
+    const r = typeof role === "string" ? role.trim() : "";
+    if (!ALL_USER_ROLES.includes(r as (typeof ALL_USER_ROLES)[number])) {
+      throw new BadRequestException(
+        `role phải là một trong: ${ALL_USER_ROLES.join(", ")}`,
+      );
+    }
+    const user = await this.userModel
+      .findByIdAndUpdate(id, { $set: { role: r } }, { new: true })
+      .select("-password")
+      .exec();
     if (!user) {
       throw new NotFoundException("Không tìm thấy người dùng");
     }

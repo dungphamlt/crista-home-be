@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
+import { canViewPartnerProductPricing } from "../auth/roles";
 import { Product, ProductDocument } from "../schemas/product.schema";
 
 @Injectable()
@@ -53,6 +54,7 @@ export class ProductService {
     skip: number,
     limit: number,
     page: number,
+    viewerRole?: string,
   ) {
     /** Không index search theo description: HTML dài dễ trùng từ ngẫu nhiên → kết quả nhiễu */
     const pathsAll = ["name", "sku"];
@@ -112,7 +114,11 @@ export class ProductService {
     ];
 
     const result = await this.productModel.aggregate(pipeline as any).exec();
-    const data = result[0]?.data || [];
+    const raw = result[0]?.data || [];
+    const data = this.sanitizeProductList(
+      raw as unknown as Record<string, unknown>[],
+      viewerRole,
+    );
     const total = result[0]?.total?.[0]?.count || 0;
 
     return {
@@ -122,6 +128,27 @@ export class ProductService {
       limit,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  private sanitizeProductDoc<T extends Record<string, unknown>>(
+    doc: T | null | undefined,
+    viewerRole?: string,
+  ): T | null | undefined {
+    if (doc == null) return doc;
+    if (canViewPartnerProductPricing(viewerRole)) return doc;
+    const { wholesalePrice, bulkWholesalePrice, ...rest } = doc;
+    return rest as T;
+  }
+
+  private sanitizeProductList<T extends Record<string, unknown>>(
+    docs: T[],
+    viewerRole?: string,
+  ): T[] {
+    if (canViewPartnerProductPricing(viewerRole)) return docs;
+    return docs.map((d) => {
+      const { wholesalePrice, bulkWholesalePrice, ...rest } = d;
+      return rest as T;
+    });
   }
 
   private slugify(text: string): string {
@@ -144,6 +171,7 @@ export class ProductService {
       isFeatured?: boolean;
       isNewArrival?: boolean;
     },
+    viewerRole?: string,
   ) {
     const skip = (page - 1) * limit;
     const query: Record<string, unknown> = {};
@@ -164,13 +192,20 @@ export class ProductService {
     const useAtlasSearch = searchTerm && this.shouldUseAtlasSearch();
 
     if (useAtlasSearch) {
-      return this.findAllWithAtlasSearch(searchTerm!, query, skip, limit, page);
+      return this.findAllWithAtlasSearch(
+        searchTerm!,
+        query,
+        skip,
+        limit,
+        page,
+        viewerRole,
+      );
     }
     if (searchTerm) {
       this.applyRegexSearch(query, searchTerm);
     }
 
-    const [data, total] = await Promise.all([
+    const [rows, total] = await Promise.all([
       this.productModel
         .find(query)
         .populate("categories", "name slug")
@@ -181,6 +216,10 @@ export class ProductService {
         .exec(),
       this.productModel.countDocuments(query),
     ]);
+    const data = this.sanitizeProductList(
+      rows as unknown as Record<string, unknown>[],
+      viewerRole,
+    );
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
@@ -195,6 +234,7 @@ export class ProductService {
       isFeatured?: boolean;
       isNewArrival?: boolean;
     },
+    viewerRole?: string,
   ) {
     const skip = (page - 1) * limit;
     const query: Record<string, unknown> = { isActive: true };
@@ -212,7 +252,14 @@ export class ProductService {
     const useAtlasSearch = searchTerm && this.shouldUseAtlasSearch();
 
     if (useAtlasSearch) {
-      return this.findAllWithAtlasSearch(searchTerm!, query, skip, limit, page);
+      return this.findAllWithAtlasSearch(
+        searchTerm!,
+        query,
+        skip,
+        limit,
+        page,
+        viewerRole,
+      );
     }
     if (searchTerm) {
       this.applyRegexSearch(query, searchTerm, true);
@@ -224,7 +271,7 @@ export class ProductService {
       query.isNewArrival = filters.isNewArrival;
     }
 
-    const [data, total] = await Promise.all([
+    const [rows, total] = await Promise.all([
       this.productModel
         .find(query)
         .populate("categories", "name slug")
@@ -236,6 +283,11 @@ export class ProductService {
       this.productModel.countDocuments(query),
     ]);
 
+    const data = this.sanitizeProductList(
+      rows as unknown as Record<string, unknown>[],
+      viewerRole,
+    );
+
     return {
       data,
       total,
@@ -245,38 +297,54 @@ export class ProductService {
     };
   }
 
-  async findOne(id: string) {
-    return this.productModel
+  async findOne(id: string, viewerRole?: string) {
+    const doc = await this.productModel
       .findById(id)
       .populate("categories", "name slug")
       .lean()
       .exec();
+    return this.sanitizeProductDoc(
+      doc as unknown as Record<string, unknown> | null,
+      viewerRole,
+    );
   }
 
-  async findBySlug(slug: string) {
-    return this.productModel
+  async findBySlug(slug: string, viewerRole?: string) {
+    const doc = await this.productModel
       .findOne({ slug, isActive: true })
       .populate("categories", "name slug")
       .lean()
       .exec();
+    return this.sanitizeProductDoc(
+      doc as unknown as Record<string, unknown> | null,
+      viewerRole,
+    );
   }
 
-  async findFeatured(limit = 10) {
-    return this.productModel
+  async findFeatured(limit = 10, viewerRole?: string) {
+    const rows = await this.productModel
       .find({ isActive: true, isFeatured: true })
       .sort({ soldCount: -1 })
       .limit(limit)
       .lean()
       .exec();
+    return this.sanitizeProductList(
+      rows as unknown as Record<string, unknown>[],
+      viewerRole,
+    );
   }
 
-  async findNew(limit = 10) {
-    return this.productModel
+  async findNew(limit = 10, viewerRole?: string) {
+    const rows = await this.productModel
       .find({ isActive: true, isNewArrival: true })
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean()
       .exec();
+    return this.sanitizeProductList(
+      rows as unknown as Record<string, unknown>[],
+      viewerRole,
+    );
   }
 
   async create(data: Partial<Product>) {

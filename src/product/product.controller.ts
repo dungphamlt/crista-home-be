@@ -7,10 +7,14 @@ import {
   Body,
   Param,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
+
+type AuthedRequest = { user?: { role?: string } };
 
 @Controller('products')
 export class ProductController {
@@ -19,6 +23,7 @@ export class ProductController {
   @UseGuards(JwtAuthGuard)
   @Get('admin')
   findAllAdmin(
+    @Req() req: AuthedRequest,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string | string[],
@@ -40,6 +45,7 @@ export class ProductController {
       page ? parseInt(page, 10) : 1,
       limit ? parseInt(limit, 10) : 20,
       Object.keys(filters).length ? filters : undefined,
+      req.user?.role,
     );
   }
 
@@ -53,8 +59,10 @@ export class ProductController {
     return t === '' ? undefined : t;
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get()
   findAll(
+    @Req() req: AuthedRequest,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('category') category?: string,
@@ -77,27 +85,44 @@ export class ProductController {
       page ? parseInt(page, 10) : 1,
       limit ? parseInt(limit, 10) : 12,
       filters,
+      req.user?.role,
     );
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('featured')
-  findFeatured(@Query('limit') limit?: string) {
-    return this.productService.findFeatured(limit ? parseInt(limit, 10) : 10);
+  findFeatured(
+    @Req() req: AuthedRequest,
+    @Query('limit') limit?: string,
+  ) {
+    return this.productService.findFeatured(
+      limit ? parseInt(limit, 10) : 10,
+      req.user?.role,
+    );
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('new')
-  findNew(@Query('limit') limit?: string) {
-    return this.productService.findNew(limit ? parseInt(limit, 10) : 10);
+  findNew(
+    @Req() req: AuthedRequest,
+    @Query('limit') limit?: string,
+  ) {
+    return this.productService.findNew(
+      limit ? parseInt(limit, 10) : 10,
+      req.user?.role,
+    );
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('slug/:slug')
-  findBySlug(@Param('slug') slug: string) {
-    return this.productService.findBySlug(slug);
+  findBySlug(@Req() req: AuthedRequest, @Param('slug') slug: string) {
+    return this.productService.findBySlug(slug, req.user?.role);
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.productService.findOne(id);
+  findOne(@Req() req: AuthedRequest, @Param('id') id: string) {
+    return this.productService.findOne(id, req.user?.role);
   }
 
   @UseGuards(JwtAuthGuard)
