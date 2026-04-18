@@ -2,11 +2,15 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, isValidObjectId } from "mongoose";
+import * as bcrypt from "bcrypt";
 import { ALL_USER_ROLES } from "../auth/roles";
 import { User, UserDocument } from "../schemas/user.schema";
+
+const PASSWORD_MIN_LENGTH = 8;
 
 export type SafeUserView = {
   id: string;
@@ -117,4 +121,75 @@ export class UserService {
     }
     return this.toSafeUser(user);
   }
+
+  async updatePasswordForAdmin(
+    id: string,
+    newPassword: string,
+  ): Promise<SafeUserView> {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException("ID không hợp lệ");
+    }
+    const pwd =
+      typeof newPassword === "string" ? newPassword.trim() : "";
+    if (pwd.length < PASSWORD_MIN_LENGTH) {
+      throw new BadRequestException(
+        `Mật khẩu phải có ít nhất ${PASSWORD_MIN_LENGTH} ký tự`,
+      );
+    }
+    const hashed = await bcrypt.hash(pwd, 10);
+    const user = await this.userModel
+      .findByIdAndUpdate(id, { $set: { password: hashed } }, { new: true })
+      .select("-password")
+      .exec();
+    if (!user) {
+      throw new NotFoundException("Không tìm thấy người dùng");
+    }
+    return this.toSafeUser(user);
+  }
+
+  /** Admin đăng nhập đổi mật khẩu của chính mình (cần đúng mật khẩu hiện tại). */
+  async updateOwnAdminPassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<SafeUserView> {
+    if (!isValidObjectId(userId)) {
+      throw new BadRequestException("ID không hợp lệ");
+    }
+    const cur = typeof currentPassword === "string" ? currentPassword : "";
+    const pwd = typeof newPassword === "string" ? newPassword.trim() : "";
+    if (cur.length === 0) {
+      throw new BadRequestException("Thiếu mật khẩu hiện tại");
+    }
+    if (pwd.length < PASSWORD_MIN_LENGTH) {
+      throw new BadRequestException(
+        `Mật khẩu phải có ít nhất ${PASSWORD_MIN_LENGTH} ký tự`,
+      );
+    }
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) {
+      throw new NotFoundException("Không tìm thấy người dùng");
+    }
+    if (!user.password) {
+      throw new BadRequestException(
+        "Tài khoản chưa có mật khẩu đăng nhập (ví dụ đăng nhập OAuth). Liên hệ quản trị để đặt mật khẩu.",
+      );
+    }
+    const match = await bcrypt.compare(cur, user.password);
+    if (!match) {
+      throw new UnauthorizedException(
+        "Mật khẩu hiện tại không đúng",
+      );
+    }
+    const hashed = await bcrypt.hash(pwd, 10);
+    const updated = await this.userModel
+      .findByIdAndUpdate(userId, { $set: { password: hashed } }, { new: true })
+      .select("-password")
+      .exec();
+    if (!updated) {
+      throw new NotFoundException("Không tìm thấy người dùng");
+    }
+    return this.toSafeUser(updated);
+  }
+
 }

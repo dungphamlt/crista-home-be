@@ -5,11 +5,14 @@ import {
   Param,
   Patch,
   Query,
+  Req,
   UseGuards,
 } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AdminGuard } from "../auth/admin.guard";
 import { UserService } from "./user.service";
+
+type AdminJwtRequest = { user: { id: unknown; email: string; role: string } };
 
 @Controller("users")
 export class UserController {
@@ -35,6 +38,30 @@ export class UserController {
   @UseGuards(JwtAuthGuard, AdminGuard)
   findOneAdmin(@Param("id") id: string) {
     return this.userService.findOneForAdmin(id);
+  }
+
+  /** CMS: admin đổi mật khẩu của chính mình — body `{ currentPassword, newPassword }` */
+  @Patch("admin/me/password")
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  updateMyPasswordAdmin(
+    @Req() req: AdminJwtRequest,
+    @Body() body: { currentPassword: string; newPassword: string },
+  ) {
+    return this.userService.updateOwnAdminPassword(
+      String(req.user.id),
+      body.currentPassword,
+      body.newPassword,
+    );
+  }
+
+  /** CMS: set user password — body `{ password }`, min 8 chars */
+  @Patch("admin/:id/password")
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  updatePasswordAdmin(
+    @Param("id") id: string,
+    @Body() body: { password: string },
+  ) {
+    return this.userService.updatePasswordForAdmin(id, body.password);
   }
 
   /** CMS: đặt role (user | admin | partner) */
