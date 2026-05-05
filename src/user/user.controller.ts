@@ -47,19 +47,41 @@ export class UserController {
     return this.authService.createAdmin(email, pwd, name);
   }
 
-  /** CMS: danh sách user (chỉ đọc) + tìm theo email/tên */
-  @Get("admin")
+  /** CMS: danh sách khách / partner (role `user` | `partner`) + tìm theo email/tên */
+  @Get("admin/users")
   @UseGuards(JwtAuthGuard, AdminGuard)
-  findAllAdmin(
+  findUsersForAdmin(
     @Query("page") page?: string,
     @Query("limit") limit?: string,
     @Query("search") search?: string,
   ) {
-    return this.userService.findAllForAdmin(
+    return this.userService.findUsersForAdmin(
       page ? parseInt(page, 10) : 1,
       limit ? parseInt(limit, 10) : 20,
       search,
     );
+  }
+
+  /** CMS: danh sách tài khoản admin + tìm theo email/tên */
+  @Get("admin/admins")
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  findAdminsForAdmin(
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
+    @Query("search") search?: string,
+  ) {
+    return this.userService.findAdminsForAdmin(
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 20,
+      search,
+    );
+  }
+
+  /** CMS: thông tin admin đang đăng nhập (JWT) */
+  @Get("admin/me")
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  getMeAdmin(@Req() req: AdminJwtRequest) {
+    return this.userService.findOneForAdmin(String(req.user.id));
   }
 
   /** CMS: chi tiết một user (chỉ đọc) */

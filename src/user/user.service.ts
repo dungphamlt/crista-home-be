@@ -7,7 +7,7 @@ import {
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, isValidObjectId } from "mongoose";
 import * as bcrypt from "bcrypt";
-import { ALL_USER_ROLES } from "../auth/roles";
+import { ALL_USER_ROLES, UserRole } from "../auth/roles";
 import { User, UserDocument } from "../schemas/user.schema";
 
 export const PASSWORD_MIN_LENGTH = 8;
@@ -45,10 +45,22 @@ export class UserService {
     };
   }
 
-  async findAllForAdmin(
-    page = 1,
-    limit = 20,
-    search?: string,
+  private buildAdminListFilter(search?: string): Record<string, unknown> {
+    const filter: Record<string, unknown> = {};
+    if (search?.trim()) {
+      const esc = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      filter.$or = [
+        { email: { $regex: esc, $options: "i" } },
+        { name: { $regex: esc, $options: "i" } },
+      ];
+    }
+    return filter;
+  }
+
+  private async findManyForAdmin(
+    base: Record<string, unknown>,
+    page: number,
+    limit: number,
   ): Promise<{
     data: SafeUserView[];
     total: number;
@@ -59,16 +71,7 @@ export class UserService {
     const safeLimit = Math.min(Math.max(1, limit), 100);
     const safePage = Math.max(1, page);
     const skip = (safePage - 1) * safeLimit;
-
-    const filter: Record<string, unknown> = {};
-    if (search?.trim()) {
-      const esc = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      filter.$or = [
-        { email: { $regex: esc, $options: "i" } },
-        { name: { $regex: esc, $options: "i" } },
-      ];
-    }
-
+    const filter = { ...base };
     const [rows, total] = await Promise.all([
       this.userModel
         .find(filter)
@@ -79,9 +82,7 @@ export class UserService {
         .exec(),
       this.userModel.countDocuments(filter),
     ]);
-
     const totalPages = Math.ceil(total / safeLimit) || 0;
-
     return {
       data: rows.map((d) => this.toSafeUser(d)),
       total,
@@ -89,6 +90,28 @@ export class UserService {
       limit: safeLimit,
       totalPages,
     };
+  }
+
+  /** Khách / partner (không bao gồm admin) */
+  async findUsersForAdmin(
+    page = 1,
+    limit = 20,
+    search?: string,
+  ) {
+    const base = this.buildAdminListFilter(search);
+    base.role = { $in: [UserRole.User, UserRole.Partner] };
+    return this.findManyForAdmin(base, page, limit);
+  }
+
+  /** Chỉ tài khoản admin */
+  async findAdminsForAdmin(
+    page = 1,
+    limit = 20,
+    search?: string,
+  ) {
+    const base = this.buildAdminListFilter(search);
+    base.role = UserRole.Admin;
+    return this.findManyForAdmin(base, page, limit);
   }
 
   async findOneForAdmin(id: string): Promise<SafeUserView> {
