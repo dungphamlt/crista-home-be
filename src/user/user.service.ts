@@ -10,7 +10,7 @@ import * as bcrypt from "bcrypt";
 import { ALL_USER_ROLES } from "../auth/roles";
 import { User, UserDocument } from "../schemas/user.schema";
 
-const PASSWORD_MIN_LENGTH = 8;
+export const PASSWORD_MIN_LENGTH = 8;
 
 export type SafeUserView = {
   id: string;
