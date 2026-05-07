@@ -18,6 +18,7 @@ async function bootstrap() {
         "https://crista-home-cms.vercel.app",
         "http://localhost:4200",
         "https://tongkhocristahome.com.vn",
+        "https://www.tongkhocristahome.com.vn",
       ];
   app.enableCors({
     origin: corsOrigins,
