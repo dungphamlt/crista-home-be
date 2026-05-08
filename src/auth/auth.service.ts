@@ -18,22 +18,29 @@ export class AuthService {
   ) {}
 
   async validateUser(
-    email: string,
+    identifier: string,
     password: string,
   ): Promise<UserDocument | null> {
-    const user = await this.userModel.findOne({ email });
+    const user = await this.userModel.findOne({
+      $or: [{ email: identifier }, { username: identifier }],
+    });
     if (!user?.password) return null;
     if (await bcrypt.compare(password, user.password)) return user;
     return null;
   }
 
   issueToken(user: UserDocument) {
-    const payload = { sub: String(user._id), email: user.email };
+    const payload = {
+      sub: String(user._id),
+      email: user.email,
+      username: user.username,
+    };
     return {
       access_token: this.jwtService.sign(payload),
       user: {
         id: String(user._id), // ✅ fix: convert ObjectId → string
         email: user.email,
+        username: user.username,
         name: user.name,
         role: user.role,
         avatar: user.avatar,
@@ -41,10 +48,10 @@ export class AuthService {
     };
   }
 
-  async login(email: string, password: string) {
-    const user = await this.validateUser(email, password);
+  async login(identifier: string, password: string) {
+    const user = await this.validateUser(identifier, password);
     if (!user)
-      throw new UnauthorizedException("Email hoặc mật khẩu không đúng");
+      throw new UnauthorizedException("Email/Username hoặc mật khẩu không đúng");
     return this.issueToken(user);
   }
 
@@ -104,15 +111,30 @@ export class AuthService {
     return this.issueToken(user);
   }
 
-  async createAdmin(email: string, password: string, name?: string) {
+  async createAdmin(username: string, password: string, name?: string) {
+    const exists = await this.userModel.findOne({
+      $or: [{ email: username }, { username }],
+    });
+    if (exists) throw new ConflictException("Username hoặc Email đã tồn tại");
+    const hashed = await bcrypt.hash(password, 10);
+    const user = await this.userModel.create({
+      username,
+      password: hashed,
+      role: "admin",
+      name: name || "Admin",
+    });
+    return { id: String(user._id), username: user.username, name: user.name };
+  }
+
+  async createPartner(email: string, password: string, name?: string) {
     const exists = await this.userModel.findOne({ email });
-    if (exists) throw new ConflictException("Email đã tồn tại"); // ✅ fix exception type
+    if (exists) throw new ConflictException("Email đã được sử dụng");
     const hashed = await bcrypt.hash(password, 10);
     const user = await this.userModel.create({
       email,
       password: hashed,
-      role: "admin",
-      name: name || "Admin",
+      role: "partner",
+      name: name || "Partner",
     });
     return { id: String(user._id), email: user.email, name: user.name };
   }

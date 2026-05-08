@@ -14,7 +14,8 @@ export const PASSWORD_MIN_LENGTH = 8;
 
 export type SafeUserView = {
   id: string;
-  email: string;
+  email?: string;
+  username?: string;
   name?: string;
   role: string;
   avatar?: string;
@@ -35,6 +36,7 @@ export class UserService {
     return {
       id: String(o._id),
       email: o.email,
+      username: o.username,
       name: o.name,
       role: o.role,
       avatar: o.avatar,
@@ -51,6 +53,7 @@ export class UserService {
       const esc = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       filter.$or = [
         { email: { $regex: esc, $options: "i" } },
+        { username: { $regex: esc, $options: "i" } },
         { name: { $regex: esc, $options: "i" } },
       ];
     }

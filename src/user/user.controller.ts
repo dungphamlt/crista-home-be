@@ -15,7 +15,9 @@ import { AdminGuard } from "../auth/admin.guard";
 import { AuthService } from "../auth/auth.service";
 import { UserService, PASSWORD_MIN_LENGTH } from "./user.service";
 
-type AdminJwtRequest = { user: { id: unknown; email: string; role: string } };
+type AdminJwtRequest = {
+  user: { id: unknown; email?: string; username?: string; role: string };
+};
 
 @Controller("users")
 export class UserController {
@@ -24,10 +26,34 @@ export class UserController {
     private readonly authService: AuthService,
   ) {}
 
-  /** CMS: tạo tài khoản admin — body `{ email, password, name? }` */
+  /** CMS: tạo tài khoản admin — body `{ username, password, name? }` */
   @Post("admin")
   @UseGuards(JwtAuthGuard, AdminGuard)
   createAdmin(
+    @Body() body: { username: string; password: string; name?: string },
+  ) {
+    const username =
+      typeof body.username === "string" ? body.username.trim() : "";
+    const pwd = typeof body.password === "string" ? body.password.trim() : "";
+    const name =
+      typeof body.name === "string" && body.name.trim() !== ""
+        ? body.name.trim()
+        : undefined;
+    if (!username) {
+      throw new BadRequestException("Thiếu username");
+    }
+    if (pwd.length < PASSWORD_MIN_LENGTH) {
+      throw new BadRequestException(
+        `Mật khẩu phải có ít nhất ${PASSWORD_MIN_LENGTH} ký tự`,
+      );
+    }
+    return this.authService.createAdmin(username, pwd, name);
+  }
+
+  /** CMS: tạo tài khoản partner — body `{ email, password, name? }` */
+  @Post("partner")
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  createPartner(
     @Body() body: { email: string; password: string; name?: string },
   ) {
     const email = typeof body.email === "string" ? body.email.trim() : "";
@@ -44,7 +70,7 @@ export class UserController {
         `Mật khẩu phải có ít nhất ${PASSWORD_MIN_LENGTH} ký tự`,
       );
     }
-    return this.authService.createAdmin(email, pwd, name);
+    return this.authService.createPartner(email, pwd, name);
   }
 
   /** CMS: danh sách khách / partner (role `user` | `partner`) + tìm theo email/tên */

@@ -365,4 +365,46 @@ export class ProductService {
   async delete(id: string) {
     return this.productModel.findByIdAndDelete(id).exec();
   }
+
+  /**
+   * Tìm kiếm Semantic (ý nghĩa) sử dụng Atlas Vector Search.
+   * Yêu cầu: Đã tạo Vector Index tên 'vector_index' trên collection products.
+   */
+  async semanticSearch(queryVector: number[], limit = 10, viewerRole?: string) {
+    const pipeline = [
+      {
+        $vectorSearch: {
+          index: "vector_index",
+          path: "embedding",
+          queryVector: queryVector,
+          numCandidates: limit * 10,
+          limit: limit,
+        },
+      },
+      {
+        $match: { isActive: true },
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "categories",
+          foreignField: "_id",
+          as: "categories",
+          pipeline: [{ $project: { name: 1, slug: 1 } }],
+        },
+      },
+      {
+        $project: {
+          embedding: 0, // Ẩn vector data cho nhẹ
+          __v: 0,
+        },
+      },
+    ];
+
+    const rows = await this.productModel.aggregate(pipeline as any).exec();
+    return this.sanitizeProductList(
+      rows as unknown as Record<string, unknown>[],
+      viewerRole,
+    );
+  }
 }

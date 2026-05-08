@@ -5,8 +5,11 @@ export type UserDocument = User & Document;
 
 @Schema({ timestamps: true })
 export class User {
-  @Prop({ required: true, unique: true })
-  email: string;
+  @Prop({ unique: true, sparse: true })
+  email?: string;
+
+  @Prop({ unique: true, sparse: true })
+  username?: string;
 
   /** Bỏ qua khi đăng ký chỉ qua OAuth */
   @Prop({ required: false })

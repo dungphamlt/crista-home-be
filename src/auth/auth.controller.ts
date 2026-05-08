@@ -4,12 +4,12 @@ import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 
 class LoginDto {
-  email: string;
+  identifier: string; // ✅ Email or Username
   password: string;
 }
 
 class CreateAdminDto {
-  email: string;
+  username: string;
   password: string;
   name?: string;
 }
@@ -18,7 +18,8 @@ type OAuthLoginResult = {
   access_token: string;
   user: {
     id: unknown;
-    email: string;
+    email?: string;
+    username?: string;
     name?: string;
     role: string;
   };
@@ -30,7 +31,7 @@ export class AuthController {
 
   @Post('login')
   async login(@Body() dto: LoginDto) {
-    return this.authService.login(dto.email, dto.password);
+    return this.authService.login(dto.identifier, dto.password);
   }
 
   @Get('google')
@@ -82,6 +83,6 @@ export class AuthController {
 
   @Post('seed-admin')
   async seedAdmin(@Body() dto: CreateAdminDto) {
-    return this.authService.createAdmin(dto.email, dto.password, dto.name);
+    return this.authService.createAdmin(dto.username, dto.password, dto.name);
   }
 }

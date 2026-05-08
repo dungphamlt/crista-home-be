@@ -63,6 +63,10 @@ export class Product {
 
   @Prop({ default: 0 })
   soldCount: number;
+
+  /** Vector embedding cho Atlas Vector Search (Semantic Search) */
+  @Prop({ type: [Number], default: undefined })
+  embedding?: number[];
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);
