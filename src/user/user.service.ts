@@ -33,9 +33,10 @@ export class UserService {
 
   private toSafeUser(doc: UserDocument): SafeUserView {
     const o = doc.toObject();
+    const isSpecial = o.role === UserRole.Admin || o.role === UserRole.Partner;
     return {
       id: String(o._id),
-      email: o.email,
+      email: isSpecial ? undefined : o.email,
       username: o.username,
       name: o.name,
       role: o.role,

@@ -30,16 +30,17 @@ export class AuthService {
   }
 
   issueToken(user: UserDocument) {
+    const isSpecialAccount = user.role === "admin" || user.role === "partner";
     const payload = {
       sub: String(user._id),
-      email: user.email,
+      email: isSpecialAccount ? undefined : user.email,
       username: user.username,
     };
     return {
       access_token: this.jwtService.sign(payload),
       user: {
-        id: String(user._id), // ✅ fix: convert ObjectId → string
-        email: user.email,
+        id: String(user._id),
+        email: isSpecialAccount ? undefined : user.email,
         username: user.username,
         name: user.name,
         role: user.role,
