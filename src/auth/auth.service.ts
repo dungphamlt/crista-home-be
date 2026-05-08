@@ -126,16 +126,28 @@ export class AuthService {
     return { id: String(user._id), username: user.username, name: user.name };
   }
 
-  async createPartner(email: string, password: string, name?: string) {
-    const exists = await this.userModel.findOne({ email });
-    if (exists) throw new ConflictException("Email đã được sử dụng");
+  async createPartner(data: {
+    username: string;
+    password: string;
+    name?: string;
+  }) {
+    const { username, password, name } = data;
+    const exists = await this.userModel.findOne({
+      $or: [{ email: username }, { username }],
+    });
+    if (exists) throw new ConflictException("Username hoặc Email đã tồn tại");
+
     const hashed = await bcrypt.hash(password, 10);
     const user = await this.userModel.create({
-      email,
+      username,
       password: hashed,
       role: "partner",
       name: name || "Partner",
     });
-    return { id: String(user._id), email: user.email, name: user.name };
+    return {
+      id: String(user._id),
+      username: user.username,
+      name: user.name,
+    };
   }
 }

@@ -50,27 +50,38 @@ export class UserController {
     return this.authService.createAdmin(username, pwd, name);
   }
 
-  /** CMS: tạo tài khoản partner — body `{ email, password, name? }` */
+  /** CMS: tạo tài khoản partner — body `{ username, password, name? }` */
   @Post("partner")
   @UseGuards(JwtAuthGuard, AdminGuard)
   createPartner(
-    @Body() body: { email: string; password: string; name?: string },
+    @Body()
+    body: {
+      username: string;
+      password: string;
+      name?: string;
+    },
   ) {
-    const email = typeof body.email === "string" ? body.email.trim() : "";
+    const username =
+      typeof body.username === "string" ? body.username.trim() : "";
     const pwd = typeof body.password === "string" ? body.password.trim() : "";
     const name =
       typeof body.name === "string" && body.name.trim() !== ""
         ? body.name.trim()
         : undefined;
-    if (!email) {
-      throw new BadRequestException("Thiếu email");
+
+    if (!username) {
+      throw new BadRequestException("Thiếu username");
     }
     if (pwd.length < PASSWORD_MIN_LENGTH) {
       throw new BadRequestException(
         `Mật khẩu phải có ít nhất ${PASSWORD_MIN_LENGTH} ký tự`,
       );
     }
-    return this.authService.createPartner(email, pwd, name);
+    return this.authService.createPartner({
+      username,
+      password: pwd,
+      name,
+    });
   }
 
   /** CMS: danh sách khách / partner (role `user` | `partner`) + tìm theo email/tên */
