@@ -88,6 +88,7 @@ export class ProductService {
       },
     };
 
+    const pricingProjection = this.getPricingProjection(viewerRole);
     const pipeline = [
       searchStage,
       { $match: baseQuery },
@@ -106,7 +107,7 @@ export class ProductService {
                 pipeline: [{ $project: { name: 1, slug: 1 } }],
               },
             },
-            { $unset: ["__v"] },
+            { $project: { ...pricingProjection, __v: 0 } },
           ],
           total: [{ $count: "count" }],
         },
@@ -130,12 +131,16 @@ export class ProductService {
     };
   }
 
+  private getPricingProjection(viewerRole?: string): Record<string, number> {
+    if (canViewPartnerProductPricing(viewerRole)) return {};
+    return { wholesalePrice: 0, bulkWholesalePrice: 0 };
+  }
+
   private sanitizeProductDoc<T extends Record<string, unknown>>(
     doc: T | null | undefined,
     viewerRole?: string,
   ): T | null | undefined {
-    if (doc == null) return doc;
-    if (canViewPartnerProductPricing(viewerRole)) return doc;
+    if (doc == null || canViewPartnerProductPricing(viewerRole)) return doc;
     const { wholesalePrice, bulkWholesalePrice, ...rest } = doc;
     return rest as T;
   }
@@ -205,9 +210,10 @@ export class ProductService {
       this.applyRegexSearch(query, searchTerm);
     }
 
+    const pricingProjection = this.getPricingProjection(viewerRole);
     const [rows, total] = await Promise.all([
       this.productModel
-        .find(query)
+        .find(query, pricingProjection)
         .populate("categories", "name slug")
         .sort({ order: 1, createdAt: -1 })
         .skip(skip)
@@ -271,9 +277,10 @@ export class ProductService {
       query.isNewArrival = filters.isNewArrival;
     }
 
+    const pricingProjection = this.getPricingProjection(viewerRole);
     const [rows, total] = await Promise.all([
       this.productModel
-        .find(query)
+        .find(query, pricingProjection)
         .populate("categories", "name slug")
         .sort({ order: 1, createdAt: -1 })
         .skip(skip)
@@ -298,8 +305,9 @@ export class ProductService {
   }
 
   async findOne(id: string, viewerRole?: string) {
+    const pricingProjection = this.getPricingProjection(viewerRole);
     const doc = await this.productModel
-      .findById(id)
+      .findById(id, pricingProjection)
       .populate("categories", "name slug")
       .lean()
       .exec();
@@ -310,8 +318,9 @@ export class ProductService {
   }
 
   async findBySlug(slug: string, viewerRole?: string) {
+    const pricingProjection = this.getPricingProjection(viewerRole);
     const doc = await this.productModel
-      .findOne({ slug, isActive: true })
+      .findOne({ slug, isActive: true }, pricingProjection)
       .populate("categories", "name slug")
       .lean()
       .exec();
@@ -322,8 +331,9 @@ export class ProductService {
   }
 
   async findFeatured(limit = 10, viewerRole?: string) {
+    const pricingProjection = this.getPricingProjection(viewerRole);
     const rows = await this.productModel
-      .find({ isActive: true, isFeatured: true })
+      .find({ isActive: true, isFeatured: true }, pricingProjection)
       .sort({ soldCount: -1 })
       .limit(limit)
       .lean()
@@ -335,8 +345,9 @@ export class ProductService {
   }
 
   async findNew(limit = 10, viewerRole?: string) {
+    const pricingProjection = this.getPricingProjection(viewerRole);
     const rows = await this.productModel
-      .find({ isActive: true, isNewArrival: true })
+      .find({ isActive: true, isNewArrival: true }, pricingProjection)
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean()
