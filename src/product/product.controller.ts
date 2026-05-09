@@ -14,7 +14,7 @@ import { ProductService } from './product.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 
-type AuthedRequest = { user?: { role?: string } };
+import { GetRole } from '../auth/get-role.decorator';
 
 @Controller('products')
 export class ProductController {
@@ -23,29 +23,28 @@ export class ProductController {
   @UseGuards(JwtAuthGuard)
   @Get('admin')
   findAllAdmin(
-    @Req() req: AuthedRequest,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
+    @GetRole() role: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
     @Query('search') search?: string | string[],
     @Query('category') category?: string,
     @Query('isActive') isActive?: string,
     @Query('isFeatured') isFeatured?: string,
     @Query('isNewArrival') isNewArrival?: string,
   ) {
-    const filters: Record<string, unknown> = {};
+    const filters: Record<string, any> = {};
     const searchStr = this.normalizeQueryParam(search);
-    if (searchStr !== undefined) filters.search = searchStr;
+    if (searchStr) filters.search = searchStr;
     if (category) filters.category = category;
-    if (isActive === 'true') filters.isActive = true;
-    if (isActive === 'false') filters.isActive = false;
+    if (isActive !== undefined) filters.isActive = isActive === 'true';
     if (isFeatured === 'true') filters.isFeatured = true;
     if (isNewArrival === 'true') filters.isNewArrival = true;
 
     return this.productService.findAllAdmin(
-      page ? parseInt(page, 10) : 1,
-      limit ? parseInt(limit, 10) : 20,
+      parseInt(page, 10),
+      parseInt(limit, 10),
       Object.keys(filters).length ? filters : undefined,
-      req.user?.role,
+      role,
     );
   }
 
@@ -62,9 +61,9 @@ export class ProductController {
   @UseGuards(OptionalJwtAuthGuard)
   @Get()
   findAll(
-    @Req() req: AuthedRequest,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
+    @GetRole() role: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '12',
     @Query('category') category?: string,
     @Query('minPrice') minPrice?: string,
     @Query('maxPrice') maxPrice?: string,
@@ -72,57 +71,46 @@ export class ProductController {
     @Query('featured') featured?: string,
     @Query('new') isNew?: string,
   ) {
-    const filters: Record<string, unknown> = {};
+    const filters: Record<string, any> = {};
     if (category) filters.category = category;
     if (minPrice) filters.minPrice = Number(minPrice);
     if (maxPrice) filters.maxPrice = Number(maxPrice);
+    
     const searchStr = this.normalizeQueryParam(search);
-    if (searchStr !== undefined) filters.search = searchStr;
+    if (searchStr) filters.search = searchStr;
     if (featured === 'true') filters.isFeatured = true;
     if (isNew === 'true') filters.isNewArrival = true;
 
     return this.productService.findAll(
-      page ? parseInt(page, 10) : 1,
-      limit ? parseInt(limit, 10) : 12,
+      parseInt(page, 10),
+      parseInt(limit, 10),
       filters,
-      req.user?.role,
+      role,
     );
   }
 
   @UseGuards(OptionalJwtAuthGuard)
   @Get('featured')
-  findFeatured(
-    @Req() req: AuthedRequest,
-    @Query('limit') limit?: string,
-  ) {
-    return this.productService.findFeatured(
-      limit ? parseInt(limit, 10) : 10,
-      req.user?.role,
-    );
+  findFeatured(@GetRole() role: string, @Query('limit') limit = '10') {
+    return this.productService.findFeatured(parseInt(limit, 10), role);
   }
 
   @UseGuards(OptionalJwtAuthGuard)
   @Get('new')
-  findNew(
-    @Req() req: AuthedRequest,
-    @Query('limit') limit?: string,
-  ) {
-    return this.productService.findNew(
-      limit ? parseInt(limit, 10) : 10,
-      req.user?.role,
-    );
+  findNew(@GetRole() role: string, @Query('limit') limit = '10') {
+    return this.productService.findNew(parseInt(limit, 10), role);
   }
 
   @UseGuards(OptionalJwtAuthGuard)
   @Get('slug/:slug')
-  findBySlug(@Req() req: AuthedRequest, @Param('slug') slug: string) {
-    return this.productService.findBySlug(slug, req.user?.role);
+  findBySlug(@GetRole() role: string, @Param('slug') slug: string) {
+    return this.productService.findBySlug(slug, role);
   }
 
   @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
-  findOne(@Req() req: AuthedRequest, @Param('id') id: string) {
-    return this.productService.findOne(id, req.user?.role);
+  findOne(@GetRole() role: string, @Param('id') id: string) {
+    return this.productService.findOne(id, role);
   }
 
   @UseGuards(JwtAuthGuard)
